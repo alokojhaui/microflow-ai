@@ -736,12 +736,36 @@ function EmptyState({ text }) {
   );
 }
 
+const CHIP_SPECS = {
+  serpentine_enhanced: {
+    name: "Smooth Serpentine",
+    spec: "Provides slow, diffusion-dominated mixing. Great for establishing continuous, extremely smooth gradients over long microfluidic channels. The extended path length ensures thorough molecular blending before reaching the culture wells."
+  },
+  manifold: {
+    name: "Linear Manifold",
+    spec: "A high-throughput structural layout. Fluid flows through a primary rapid-mixing bus and is aliquoted down discrete vertical nozzles. Minimizes shear stress drop-off across wells and ensures uniform volume distribution."
+  },
+  radial: {
+    name: "Radial Hub",
+    spec: "Utilizes a central vortex mixing chamber that branches radially. Maintains perfectly equal fluidic resistance to all peripheral wells. Commonly used in centrifugal (Lab-on-a-CD) platforms for simultaneous, equal-pressure droplet dispensing."
+  },
+  tree: {
+    name: "Christmas Tree Mixer",
+    spec: "The classic Whitesides gradient generator. Uses successive splitting, mixing, and recombining of laminar flow streams. Mathematically generates highly precise linear or logarithmic concentration profiles depending on branch channel widths."
+  },
+  serpentine_legacy: {
+    name: "Legacy Serpentine",
+    spec: "Original orthogonal-channel serpentine model. Relies on chaotic advection around sharp 90-degree corners. While structurally simple to fabricate, it can create uneven shear stress at corners."
+  }
+};
+
 // ---------------------------------------------------------------------------
 // Single assay mode
 // ---------------------------------------------------------------------------
 function SingleAssayView({ concentrations, labels, pushHistory, keyReady, onNeedKey, compounds, compoundColors, onRemoveCompound, onAddCompound }) {
   const [presetId, setPresetId] = useState(compounds[0].id);
   const preset = compounds.find((p) => p.id === presetId) || compounds[0];
+  const [chipDesign, setChipDesign] = useState("serpentine_enhanced");
 
   // If the selected compound was removed, fall back to first
   useEffect(() => {
@@ -828,6 +852,13 @@ function SingleAssayView({ concentrations, labels, pushHistory, keyReady, onNeed
         <div className="mf-card">
           <h2><Droplet size={14} /> Gradient-generator chip</h2>
           <div className="mf-controls">
+            <select className="mf-select" value={chipDesign} onChange={(e) => setChipDesign(e.target.value)}>
+              {Object.entries(CHIP_SPECS).map(([k, v]) => (
+                <option key={k} value={k}>{v.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="mf-controls">
             <select id="compound-select" className="mf-select" value={presetId} onChange={(e) => setPresetId(e.target.value)}>
               {compounds.map((p) => (
                 <option key={p.id} value={p.id}>{p.name} — {p.cls}</option>
@@ -851,7 +882,18 @@ function SingleAssayView({ concentrations, labels, pushHistory, keyReady, onNeed
               </button>
             )}
           </div>
-          <ChipSVG wells={wells} />
+          <ChipSVG wells={wells} design={chipDesign} />
+          
+          <div style={{ marginTop: 16, padding: "12px", background: "var(--panel-2)", border: "1px solid var(--line)", borderRadius: 8 }}>
+            <h3 style={{ margin: "0 0 6px", fontSize: 13, color: "var(--text)" }}>{CHIP_SPECS[chipDesign].name} — Specifications</h3>
+            <p style={{ margin: 0, fontSize: 12.5, color: "var(--muted)", lineHeight: 1.5 }}>
+              {CHIP_SPECS[chipDesign].spec}
+            </p>
+            <p style={{ margin: "8px 0 0", fontSize: 12, color: "var(--amber)", fontStyle: "italic" }}>
+              *Note: While real-world microfluidic geometries affect concentration scaling (e.g. linear vs. logarithmic gradients), 
+              the simulated readouts in this app apply a standardized logarithmic 6-point concentration scale across all physical chip designs for direct comparability.
+            </p>
+          </div>
         </div>
 
         <div className="mf-card">
@@ -1292,47 +1334,172 @@ function ImageView({ pushHistory, keyReady, onNeedKey }) {
 // ---------------------------------------------------------------------------
 // Chip visual: two inlets → serpentine mixing channel → 6 wells
 // ---------------------------------------------------------------------------
-function ChipSVG({ wells }) {
+function ChipSVG({ wells, design }) {
   const wellX = [110, 200, 290, 380, 470, 560];
+  const levels = [
+    { y: 30, nodes: [290, 380] },
+    { y: 70, nodes: [245, 335, 425] },
+    { y: 110, nodes: [200, 290, 380, 470] },
+    { y: 150, nodes: [155, 245, 335, 425, 515] },
+    { y: 190, nodes: [110, 200, 290, 380, 470, 560] },
+  ];
+  const pipe = (x1, y1, x2, y2) => `M${x1},${y1} C${x1},${(y1 + y2) / 2} ${x2},${(y1 + y2) / 2} ${x2},${y2}`;
+
+  const renderNetwork = () => {
+    switch (design) {
+      case "tree":
+        return (
+          <>
+            <circle cx="290" cy="18" r="12" fill="var(--amber)" opacity="0.85" />
+            <text x="290" y="6" textAnchor="middle" className="mf-well-label">DRUG</text>
+            <circle cx="380" cy="18" r="12" fill="var(--cyan)" opacity="0.85" />
+            <text x="380" y="6" textAnchor="middle" className="mf-well-label">MEDIA</text>
+
+            {levels.slice(0, 4).map((lvl, i) =>
+              lvl.nodes.map((nx, j) => (
+                <g key={`bg-${i}-${j}`}>
+                  <path d={pipe(nx, lvl.y, levels[i+1].nodes[j], levels[i+1].y)} stroke="#3a4a6b" strokeWidth="7" fill="none" strokeLinecap="round" />
+                  <path d={pipe(nx, lvl.y, levels[i+1].nodes[j+1], levels[i+1].y)} stroke="#3a4a6b" strokeWidth="7" fill="none" strokeLinecap="round" />
+                </g>
+              ))
+            )}
+            {levels.slice(0, 4).map((lvl, i) =>
+              lvl.nodes.map((nx, j) => (
+                <g key={`flow-${i}-${j}`}>
+                  <path className={wells ? "mf-flow" : ""} d={pipe(nx, lvl.y, levels[i+1].nodes[j], levels[i+1].y)} stroke="url(#mixGrad)" strokeWidth="3" fill="none" strokeLinecap="round" opacity={wells ? "0.9" : "0"} />
+                  <path className={wells ? "mf-flow" : ""} d={pipe(nx, lvl.y, levels[i+1].nodes[j+1], levels[i+1].y)} stroke="url(#mixGrad)" strokeWidth="3" fill="none" strokeLinecap="round" opacity={wells ? "0.9" : "0"} />
+                </g>
+              ))
+            )}
+            <text x="335" y="100" textAnchor="middle" className="mf-well-label" fill="#5a6c8f">CHRISTMAS TREE MIXER</text>
+            {levels[4].nodes.map((x, i) => <path key={`drop-${i}`} d={`M${x},190 V240`} stroke="#3a4a6b" strokeWidth="7" fill="none" strokeLinecap="round" />)}
+            {levels[4].nodes.map((x, i) => <path key={`drop-flow-${i}`} className={wells ? "mf-flow" : ""} d={`M${x},190 V240`} stroke="url(#mixGrad)" strokeWidth="3" fill="none" strokeLinecap="round" opacity={wells ? "0.9" : "0"} />)}
+          </>
+        );
+
+      case "serpentine_enhanced":
+        return (
+          <>
+            <circle cx="140" cy="26" r="12" fill="var(--amber)" opacity="0.85" />
+            <text x="140" y="14" textAnchor="middle" className="mf-well-label">DRUG</text>
+            <circle cx="520" cy="26" r="12" fill="var(--cyan)" opacity="0.55" />
+            <text x="520" y="14" textAnchor="middle" className="mf-well-label">MEDIA</text>
+            
+            <path d="M140,38 V50 C140,65 155,80 170,80 H490 C505,80 520,95 520,110 C520,125 505,140 490,140 H150 C135,140 120,155 120,170 C120,185 135,200 150,200 H550" stroke="#3a4a6b" strokeWidth="12" fill="none" strokeLinecap="round"/>
+            <path d="M520,38 V50 C520,65 505,80 490,80" stroke="#3a4a6b" strokeWidth="12" fill="none" strokeLinecap="round"/>
+            
+            <path className={wells ? "mf-flow" : ""} d="M140,38 V50 C140,65 155,80 170,80 H490 C505,80 520,95 520,110 C520,125 505,140 490,140 H150 C135,140 120,155 120,170 C120,185 135,200 150,200 H550" stroke="url(#mixGrad)" strokeWidth="4" fill="none" strokeLinecap="round" opacity={wells ? "0.9" : "0"}/>
+            <path className={wells ? "mf-flow" : ""} d="M520,38 V50 C520,65 505,80 490,80" stroke="var(--cyan)" strokeWidth="4" fill="none" strokeLinecap="round" opacity={wells ? "0.5" : "0"}/>
+
+            <text x="330" y="126" textAnchor="middle" className="mf-well-label" fill="#5a6c8f">SMOOTH SERPENTINE</text>
+
+            <g stroke="#3a4a6b" strokeWidth="6" fill="none" strokeLinecap="round">
+              {wellX.map(x => <path key={x} d={`M${x},200 V240`} />)}
+            </g>
+            <g stroke="url(#mixGrad)" strokeWidth="3" fill="none" strokeLinecap="round" opacity={wells ? "0.9" : "0"} className={wells ? "mf-flow" : ""}>
+              {wellX.map(x => <path key={`flow-${x}`} d={`M${x},200 V240`} />)}
+            </g>
+          </>
+        );
+
+      case "manifold":
+        return (
+          <>
+            <circle cx="110" cy="36" r="12" fill="var(--amber)" opacity="0.85" />
+            <text x="110" y="16" textAnchor="middle" className="mf-well-label">DRUG</text>
+            <circle cx="560" cy="36" r="12" fill="var(--cyan)" opacity="0.55" />
+            <text x="560" y="16" textAnchor="middle" className="mf-well-label">MEDIA</text>
+            
+            <path d="M110,48 V120 H560 V48" stroke="#3a4a6b" strokeWidth="14" fill="none" strokeLinejoin="round"/>
+            <path className={wells ? "mf-flow" : ""} d="M110,48 V120 H560 V48" stroke="url(#mixGrad)" strokeWidth="5" fill="none" strokeLinejoin="round" opacity={wells ? "0.9" : "0"}/>
+            
+            <text x="335" y="86" textAnchor="middle" className="mf-well-label" fill="#5a6c8f">LINEAR MANIFOLD</text>
+
+            <g stroke="#3a4a6b" strokeWidth="8" fill="none" strokeLinecap="round">
+              {wellX.map(x => <path key={x} d={`M${x},120 V240`} />)}
+            </g>
+            <g stroke="url(#mixGrad)" strokeWidth="4" fill="none" strokeLinecap="round" opacity={wells ? "0.9" : "0"} className={wells ? "mf-flow" : ""}>
+              {wellX.map(x => <path key={`flow-${x}`} d={`M${x},120 V240`} />)}
+            </g>
+          </>
+        );
+
+      case "radial":
+        return (
+          <>
+            <circle cx="290" cy="30" r="12" fill="var(--amber)" opacity="0.85" />
+            <text x="290" y="12" textAnchor="middle" className="mf-well-label">DRUG</text>
+            <circle cx="380" cy="30" r="12" fill="var(--cyan)" opacity="0.55" />
+            <text x="380" y="12" textAnchor="middle" className="mf-well-label">MEDIA</text>
+            
+            <path d="M290,42 C290,80 335,80 335,110" stroke="#3a4a6b" strokeWidth="12" fill="none" strokeLinecap="round"/>
+            <path d="M380,42 C380,80 335,80 335,110" stroke="#3a4a6b" strokeWidth="12" fill="none" strokeLinecap="round"/>
+            
+            <circle cx="335" cy="130" r="22" fill="#3a4a6b" />
+            {wells && <circle cx="335" cy="130" r="16" fill="url(#mixGrad)" opacity="0.8" />}
+            
+            <text x="335" y="80" textAnchor="middle" className="mf-well-label" fill="#5a6c8f">RADIAL HUB</text>
+
+            <g stroke="#3a4a6b" strokeWidth="6" fill="none" strokeLinecap="round">
+              {wellX.map((x, i) => <path key={x} d={`M335,${145 + (i%2)*5} C335,${190} ${x},${190} ${x},240`} />)}
+            </g>
+            
+            <path className={wells ? "mf-flow" : ""} d="M290,42 C290,80 335,80 335,110" stroke="var(--amber)" strokeWidth="4" fill="none" strokeLinecap="round" opacity={wells ? "0.9" : "0"}/>
+            <path className={wells ? "mf-flow" : ""} d="M380,42 C380,80 335,80 335,110" stroke="var(--cyan)" strokeWidth="4" fill="none" strokeLinecap="round" opacity={wells ? "0.9" : "0"}/>
+            
+            <g strokeWidth="2.5" fill="none" strokeLinecap="round" opacity={wells ? "0.9" : "0"} className={wells ? "mf-flow" : ""}>
+              {wellX.map((x, i) => {
+                 const colors = ["#f5b942", "#f1c062", "#add8a4", "#8ae2be", "#66e5d8", "#4de8d4"];
+                 return <path key={`flow-${x}`} d={`M335,${145 + (i%2)*5} C335,${190} ${x},${190} ${x},240`} stroke={colors[i]} />;
+              })}
+            </g>
+          </>
+        );
+
+      case "serpentine_legacy":
+      default:
+        return (
+          <>
+            <circle cx="140" cy="26" r="12" fill="var(--amber)" opacity="0.85" />
+            <text x="140" y="14" textAnchor="middle" className="mf-well-label">DRUG</text>
+            <circle cx="520" cy="26" r="12" fill="var(--cyan)" opacity="0.55" />
+            <text x="520" y="14" textAnchor="middle" className="mf-well-label">MEDIA</text>
+
+            <path d="M140,38 V60" stroke="var(--amber)" strokeWidth="3" fill="none" opacity="0.8" />
+            <path d="M520,38 V60" stroke="var(--cyan)" strokeWidth="3" fill="none" opacity="0.5" />
+
+            <path d="M140,60 H520 V90 H120 V120 H540 V150 H100 V180 H560" stroke="#3a4a6b" strokeWidth="10" fill="none" strokeLinejoin="round" />
+            {wells && <path className="mf-flow" d="M140,60 H520 V90 H120 V120 H540 V150 H100 V180 H560" stroke="var(--cyan)" strokeWidth="2" fill="none" strokeLinejoin="round" opacity="0.8" />}
+            
+            <text x="330" y="106" textAnchor="middle" className="mf-well-label" fill="#5a6c8f">LEGACY SERPENTINE</text>
+
+            {wellX.map((x) => <path key={x} d={`M${x},180 V240`} stroke="#3a4a6b" strokeWidth="4" fill="none" />)}
+          </>
+        );
+    }
+  };
+
   return (
     <svg className="mf-chip-svg" viewBox="0 0 640 360" xmlns="http://www.w3.org/2000/svg" aria-label="Microfluidic chip diagram">
-      <circle cx="140" cy="26" r="12" fill="var(--amber)" opacity="0.85" />
-      <text x="140" y="14" textAnchor="middle" className="mf-well-label">DRUG</text>
-      <circle cx="520" cy="26" r="12" fill="var(--cyan)" opacity="0.55" />
-      <text x="520" y="14" textAnchor="middle" className="mf-well-label">MEDIA</text>
-
-      <path d="M140,38 V60" stroke="var(--amber)" strokeWidth="3" fill="none" opacity="0.8" />
-      <path d="M520,38 V60" stroke="var(--cyan)" strokeWidth="3" fill="none" opacity="0.5" />
-
-      <path d="M140,60 H520 V90 H120 V120 H540 V150 H100 V180 H560"
-        stroke="#3a4a6b" strokeWidth="10" fill="none" strokeLinejoin="round" />
-      <path className="mf-flow"
-        d="M140,60 H520 V90 H120 V120 H540 V150 H100 V180 H560"
-        stroke="var(--cyan)" strokeWidth="2" fill="none" strokeLinejoin="round" opacity="0.8" />
-      <text x="330" y="106" textAnchor="middle" className="mf-well-label" fill="#5a6c8f">GRADIENT MIXING ZONE</text>
-
-      {wellX.map((x, i) => (
-        <path key={i} d={`M${x},180 V240`} stroke="#3a4a6b" strokeWidth="4" fill="none" />
-      ))}
-
+      <defs>
+        <linearGradient id="mixGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="10%" stopColor="var(--amber)" />
+          <stop offset="50%" stopColor="#8ea0bd" />
+          <stop offset="90%" stopColor="var(--cyan)" />
+        </linearGradient>
+      </defs>
+      {renderNetwork()}
       {wellX.map((x, i) => {
         const w = wells ? wells[i] : null;
         return (
           <g key={x}>
-            <circle cx={x} cy="290" r="34" fill="#0e1830" stroke="#2c3c5c" strokeWidth="2" />
+            <circle cx={x} cy="290" r="34" fill="#0e1830" stroke="#2c3c5c" strokeWidth="2.5" />
             {DOT_OFFSETS.map(([dx, dy], j) => {
               let fill = "#3a4a6b";
               if (w) fill = j < w.deadDots ? "var(--coral)" : "var(--cyan)";
-              return (
-                <circle key={j} className="mf-dot-cell"
-                  cx={x + dx} cy={290 + dy} r="2.6"
-                  fill={fill} opacity={w ? 0.9 : 0.5}
-                />
-              );
+              return <circle key={j} className="mf-dot-cell" cx={x + dx} cy={290 + dy} r="2.6" fill={fill} opacity={w ? 0.9 : 0.5} />;
             })}
-            <text x={x} y="336" textAnchor="middle" className="mf-well-label">
-              {w ? `${w.label}µM` : "—"}
-            </text>
+            <text x={x} y="342" textAnchor="middle" className="mf-well-label">{w ? `${w.label}µM` : "—"}</text>
           </g>
         );
       })}
