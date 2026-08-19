@@ -49,31 +49,74 @@ async function callGemini({ system, content, max_tokens = 1000 }) {
     generationConfig: {
       maxOutputTokens: max_tokens,
       temperature: 0.3,
+      responseMimeType: "application/json",
     },
   };
 
-  const res = await fetch(
-    `${GEMINI_BASE}/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    }
-  );
+  let res;
+  try {
+    res = await fetch(
+      `${GEMINI_BASE}/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      }
+    );
+  } catch (netErr) {
+    throw new Error(`Network error: ${netErr.message}`);
+  }
 
   if (!res.ok) {
-    const errText = await res.text().catch(() => res.statusText);
-    // Surface quota / auth errors clearly
-    if (res.status === 401 || res.status === 403) throw new Error("AUTH_ERROR: " + errText);
-    throw new Error(`Gemini API error ${res.status}: ${errText}`);
+    let errBody = "";
+    try { errBody = await res.text(); } catch (_) { errBody = res.statusText; }
+    // Try to extract a human-readable message from the API error JSON
+    try {
+      const parsed = JSON.parse(errBody);
+      const msg = parsed?.error?.message || errBody;
+      if (res.status === 400) throw new Error(`Bad request: ${msg}`);
+      if (res.status === 401 || res.status === 403) throw new Error(`API key rejected (${res.status}): ${msg}`);
+      if (res.status === 429) throw new Error(`Quota exceeded — wait a moment and retry.`);
+      throw new Error(`Gemini ${res.status}: ${msg}`);
+    } catch (e) {
+      if (e.message.startsWith("Gemini") || e.message.startsWith("API") ||
+          e.message.startsWith("Bad") || e.message.startsWith("Quota") ||
+          e.message.startsWith("Network")) throw e;
+      throw new Error(`Gemini API error ${res.status}: ${errBody.slice(0, 200)}`);
+    }
   }
 
   const data = await res.json();
+
+  // Check for blocked or empty response
+  const finishReason = data.candidates?.[0]?.finishReason;
+  if (finishReason === "SAFETY" || finishReason === "RECITATION") {
+    throw new Error(`Response blocked by Gemini safety filters (${finishReason}).`);
+  }
+
   const raw = (data.candidates?.[0]?.content?.parts || [])
     .map((p) => p.text || "")
     .join("\n");
-  const clean = raw.replace(/```json|```/g, "").trim();
-  return JSON.parse(clean);
+
+  if (!raw.trim()) {
+    // Log the full response for debugging
+    console.error("Empty Gemini response:", JSON.stringify(data));
+    throw new Error(`Gemini returned an empty response. Finish reason: ${finishReason || "unknown"}`);
+  }
+
+  // Robust JSON extraction: strip markdown fences then find the first { } block
+  const stripped = raw.replace(/```json\s*|```\s*/g, "").trim();
+  const jsonMatch = stripped.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    console.error("No JSON object found in Gemini response:", raw);
+    throw new Error("Gemini response did not contain valid JSON.");
+  }
+  try {
+    return JSON.parse(jsonMatch[0]);
+  } catch (parseErr) {
+    console.error("JSON parse failed:", jsonMatch[0]);
+    throw new Error(`JSON parse error: ${parseErr.message}`);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -767,7 +810,7 @@ function SingleAssayView({ concentrations, labels, pushHistory, keyReady, onNeed
       if (e.message === "NO_KEY") {
         setAiError("NO_KEY");
       } else {
-        setAiError("AI analysis failed. Check your API key or try again.");
+        setAiError(e.message || "AI analysis failed — try again.");
       }
     } finally {
       setAiLoading(false);
@@ -991,7 +1034,7 @@ function CompareView({ concentrations, labels, pushHistory, keyReady, onNeedKey,
       });
     } catch (e) {
       if (e.message === "NO_KEY") setAiError("NO_KEY");
-      else setAiError("AI comparison failed. Check your API key or try again.");
+      else setAiError(e.message || "AI comparison failed — try again.");
     } finally {
       setAiLoading(false);
     }
@@ -1164,7 +1207,7 @@ function ImageView({ pushHistory, keyReady, onNeedKey }) {
       });
     } catch (e) {
       if (e.message === "NO_KEY") setError("NO_KEY");
-      else setError("Image analysis failed — check your API key or try a smaller image.");
+      else setError(e.message || "Image analysis failed — try again.");
     } finally {
       setAnalyzing(false);
     }
