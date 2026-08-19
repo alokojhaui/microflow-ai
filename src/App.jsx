@@ -6,7 +6,6 @@ import {
 import {
   FlaskConical, Activity, AlertTriangle, CheckCircle2, RotateCw, Sparkles, Droplet,
   SlidersHorizontal, Layers, Image as ImageIcon, Upload, Beaker, Info, Key, X,
-  Sun, Moon,
 } from "lucide-react";
 // ---------------------------------------------------------------------------
 // Gemini REST API — direct fetch to generativelanguage.googleapis.com
@@ -474,18 +473,8 @@ export default function App() {
     setDoseMaxExp(Math.max(v, doseMinExp + 1));
   };
 
-  const [theme, setTheme] = useState(() => localStorage.getItem("mf_theme") || "dark");
-
-  const toggleTheme = useCallback(() => {
-    setTheme((t) => {
-      const next = t === "dark" ? "light" : "dark";
-      localStorage.setItem("mf_theme", next);
-      return next;
-    });
-  }, []);
-
   return (
-    <div className="mf-root" data-theme={theme}>
+    <div className="mf-root">
       <style>{`
         .mf-root {
           --ink: #0b1220;
@@ -498,30 +487,8 @@ export default function App() {
           --coral: #ff6b6b;
           --amber: #f5b942;
           --violet: #b98cff;
-          --bg-grad: radial-gradient(ellipse at top left, #0e1830 0%, var(--ink) 55%);
-          --btn-bg: linear-gradient(180deg, #1a2740, #14203a);
-          --btn-bg-primary: linear-gradient(180deg, #1c3a36, #142822);
-          --tab-active-bg: linear-gradient(180deg, #16241f, #101c19);
-        }
-        .mf-root[data-theme="light"] {
-          --ink: #f8fafc;
-          --panel: #ffffff;
-          --panel-2: #f1f5f9;
-          --line: #cbd5e1;
-          --text: #0f172a;
-          --muted: #64748b;
-          --cyan: #0d9488;
-          --coral: #e11d48;
-          --amber: #d97706;
-          --violet: #7c3aed;
-          --bg-grad: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-          --btn-bg: linear-gradient(180deg, #ffffff, #f1f5f9);
-          --btn-bg-primary: linear-gradient(180deg, #f0fdfa, #ccfbf1);
-          --tab-active-bg: linear-gradient(180deg, #f0fdfa, #ccfbf1);
-        }
-
           font-family: 'Inter', -apple-system, sans-serif;
-          background: var(--bg-grad);
+          background: radial-gradient(ellipse at top left, #0e1830 0%, var(--ink) 55%);
           color: var(--text);
           padding: 28px;
           border-radius: 0;
@@ -545,7 +512,7 @@ export default function App() {
         .mf-tabs { display:flex; gap:8px; margin-bottom:18px; flex-wrap:wrap; }
         .mf-tab { background: var(--panel); border: 1px solid var(--line); color: var(--muted); padding: 8px 14px; border-radius: 9px; font-size: 13px; cursor: pointer; display:flex; align-items:center; gap:7px; transition: all 0.15s ease; }
         .mf-tab:hover { color: var(--text); border-color: #33415f; }
-        .mf-tab.active { color: var(--cyan); border-color: #275a52; background: var(--tab-active-bg); }
+        .mf-tab.active { color: var(--cyan); border-color: #275a52; background: linear-gradient(180deg, #16241f, #101c19); }
 
         .mf-grid { display:grid; grid-template-columns: 1fr 1.1fr; gap: 22px; }
         @media (max-width: 820px) { .mf-grid { grid-template-columns: 1fr; } }
@@ -555,10 +522,10 @@ export default function App() {
 
         .mf-controls { display:flex; gap:10px; margin-bottom: 14px; flex-wrap: wrap; }
         .mf-select { flex: 1; min-width: 180px; background: var(--panel-2); border: 1px solid var(--line); color: var(--text); padding: 9px 10px; border-radius: 8px; font-size: 13px; }
-        .mf-btn { background: var(--btn-bg); border: 1px solid var(--line); color: var(--text); padding: 9px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; display:flex; align-items:center; gap:7px; transition: all 0.15s ease; }
+        .mf-btn { background: linear-gradient(180deg, #1a2740, #14203a); border: 1px solid var(--line); color: var(--text); padding: 9px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; display:flex; align-items:center; gap:7px; transition: all 0.15s ease; }
         .mf-btn:hover:not(:disabled) { border-color: var(--cyan); color: var(--cyan); }
         .mf-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .mf-btn.primary { background: var(--btn-bg-primary); border-color: #275a52; color: var(--cyan); }
+        .mf-btn.primary { background: linear-gradient(180deg, #1c3a36, #142822); border-color: #275a52; color: var(--cyan); }
         .mf-btn.primary:hover:not(:disabled) { box-shadow: 0 0 0 3px rgba(77,232,212,0.15); }
         .mf-btn.key-btn { border-color: var(--amber); color: var(--amber); }
         .mf-btn.key-btn:hover:not(:disabled) { box-shadow: 0 0 0 3px rgba(245,185,66,0.15); }
@@ -644,9 +611,6 @@ export default function App() {
           </div>
         </div>
         <div className="mf-header-right">
-          <button className="mf-btn" onClick={toggleTheme} title="Toggle theme">
-            {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
-          </button>
           <button className="mf-btn" onClick={() => setShowAddModal(true)} style={{ borderColor: "var(--violet)", color: "var(--violet)" }}>
             <FlaskConical size={13} /> Add compound
           </button>
@@ -1329,82 +1293,44 @@ function ImageView({ pushHistory, keyReady, onNeedKey }) {
 // Chip visual: two inlets → serpentine mixing channel → 6 wells
 // ---------------------------------------------------------------------------
 function ChipSVG({ wells }) {
-  const levels = [
-    { y: 30, nodes: [290, 380] },
-    { y: 70, nodes: [245, 335, 425] },
-    { y: 110, nodes: [200, 290, 380, 470] },
-    { y: 150, nodes: [155, 245, 335, 425, 515] },
-    { y: 190, nodes: [110, 200, 290, 380, 470, 560] },
-  ];
-
-  const pipe = (x1, y1, x2, y2) => {
-    const midY = (y1 + y2) / 2;
-    return `M${x1},${y1} C${x1},${midY} ${x2},${midY} ${x2},${y2}`;
-  };
-
+  const wellX = [110, 200, 290, 380, 470, 560];
   return (
     <svg className="mf-chip-svg" viewBox="0 0 640 360" xmlns="http://www.w3.org/2000/svg" aria-label="Microfluidic chip diagram">
-      <defs>
-        <linearGradient id="mixGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="10%" stopColor="var(--amber)" />
-          <stop offset="50%" stopColor="#8ea0bd" />
-          <stop offset="90%" stopColor="var(--cyan)" />
-        </linearGradient>
-      </defs>
+      <circle cx="140" cy="26" r="12" fill="var(--amber)" opacity="0.85" />
+      <text x="140" y="14" textAnchor="middle" className="mf-well-label">DRUG</text>
+      <circle cx="520" cy="26" r="12" fill="var(--cyan)" opacity="0.55" />
+      <text x="520" y="14" textAnchor="middle" className="mf-well-label">MEDIA</text>
 
-      {/* Inlets */}
-      <circle cx="290" cy="18" r="12" fill="var(--amber)" opacity="0.85" />
-      <text x="290" y="6" textAnchor="middle" className="mf-well-label">DRUG</text>
-      <circle cx="380" cy="18" r="12" fill="var(--cyan)" opacity="0.85" />
-      <text x="380" y="6" textAnchor="middle" className="mf-well-label">MEDIA</text>
+      <path d="M140,38 V60" stroke="var(--amber)" strokeWidth="3" fill="none" opacity="0.8" />
+      <path d="M520,38 V60" stroke="var(--cyan)" strokeWidth="3" fill="none" opacity="0.5" />
 
-      {/* Tree mixer structural pipes */}
-      {levels.slice(0, 4).map((lvl, i) =>
-        lvl.nodes.map((nx, j) => (
-          <g key={`bg-${i}-${j}`}>
-            <path d={pipe(nx, lvl.y, levels[i+1].nodes[j], levels[i+1].y)} stroke="var(--line)" strokeWidth="7" fill="none" strokeLinecap="round" />
-            <path d={pipe(nx, lvl.y, levels[i+1].nodes[j+1], levels[i+1].y)} stroke="var(--line)" strokeWidth="7" fill="none" strokeLinecap="round" />
-          </g>
-        ))
-      )}
+      <path d="M140,60 H520 V90 H120 V120 H540 V150 H100 V180 H560"
+        stroke="#3a4a6b" strokeWidth="10" fill="none" strokeLinejoin="round" />
+      <path className="mf-flow"
+        d="M140,60 H520 V90 H120 V120 H540 V150 H100 V180 H560"
+        stroke="var(--cyan)" strokeWidth="2" fill="none" strokeLinejoin="round" opacity="0.8" />
+      <text x="330" y="106" textAnchor="middle" className="mf-well-label" fill="#5a6c8f">GRADIENT MIXING ZONE</text>
 
-      {/* Tree mixer fluid animation */}
-      {levels.slice(0, 4).map((lvl, i) =>
-        lvl.nodes.map((nx, j) => (
-          <g key={`flow-${i}-${j}`}>
-            <path className={wells ? "mf-flow" : ""} d={pipe(nx, lvl.y, levels[i+1].nodes[j], levels[i+1].y)} stroke="url(#mixGrad)" strokeWidth="3" fill="none" strokeLinecap="round" opacity={wells ? "0.9" : "0"} />
-            <path className={wells ? "mf-flow" : ""} d={pipe(nx, lvl.y, levels[i+1].nodes[j+1], levels[i+1].y)} stroke="url(#mixGrad)" strokeWidth="3" fill="none" strokeLinecap="round" opacity={wells ? "0.9" : "0"} />
-          </g>
-        ))
-      )}
-      
-      <text x="335" y="100" textAnchor="middle" className="mf-well-label" fill="var(--muted)">CHRISTMAS TREE MIXER</text>
-
-      {/* Vertical drops into wells */}
-      {levels[4].nodes.map((x, i) => (
-        <path key={`drop-${i}`} d={`M${x},190 V240`} stroke="var(--line)" strokeWidth="7" fill="none" strokeLinecap="round" />
-      ))}
-      {levels[4].nodes.map((x, i) => (
-        <path key={`drop-flow-${i}`} className={wells ? "mf-flow" : ""} d={`M${x},190 V240`} stroke="url(#mixGrad)" strokeWidth="3" fill="none" strokeLinecap="round" opacity={wells ? "0.9" : "0"} />
+      {wellX.map((x, i) => (
+        <path key={i} d={`M${x},180 V240`} stroke="#3a4a6b" strokeWidth="4" fill="none" />
       ))}
 
-      {/* Wells */}
-      {levels[4].nodes.map((x, i) => {
+      {wellX.map((x, i) => {
         const w = wells ? wells[i] : null;
         return (
           <g key={x}>
-            <circle cx={x} cy="290" r="34" fill="var(--panel-2)" stroke="var(--line)" strokeWidth="2.5" />
+            <circle cx={x} cy="290" r="34" fill="#0e1830" stroke="#2c3c5c" strokeWidth="2" />
             {DOT_OFFSETS.map(([dx, dy], j) => {
-              let fill = "var(--muted)";
+              let fill = "#3a4a6b";
               if (w) fill = j < w.deadDots ? "var(--coral)" : "var(--cyan)";
               return (
                 <circle key={j} className="mf-dot-cell"
                   cx={x + dx} cy={290 + dy} r="2.6"
-                  fill={fill} opacity={w ? 0.9 : 0.3}
+                  fill={fill} opacity={w ? 0.9 : 0.5}
                 />
               );
             })}
-            <text x={x} y="342" textAnchor="middle" className="mf-well-label">
+            <text x={x} y="336" textAnchor="middle" className="mf-well-label">
               {w ? `${w.label}µM` : "—"}
             </text>
           </g>
