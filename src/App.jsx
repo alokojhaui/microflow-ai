@@ -11,7 +11,7 @@ import {
 // Gemini REST API — direct fetch to generativelanguage.googleapis.com
 // (avoids @google/genai SDK routing to internal GCP endpoints)
 // ---------------------------------------------------------------------------
-const GEMINI_MODEL = "gemini-2.5-flash";
+const GEMINI_MODEL = "gemini-3.6-flash";
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
 function getApiKey() {
