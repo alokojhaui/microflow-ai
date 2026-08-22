@@ -3,15 +3,16 @@
   <defs>
     <linearGradient id="flowGrad" x1="-100%" y1="0%" x2="0%" y2="0%">
       <stop offset="0%" stopColor="#f5b942" />
-      <stop offset="30%" stopColor="#4de8d4" />
-      <stop offset="70%" stopColor="#8ea0bd" />
+      <stop offset="25%" stopColor="#4de8d4" />
+      <stop offset="50%" stopColor="#66e5d8" />
+      <stop offset="75%" stopColor="#4de8d4" />
       <stop offset="100%" stopColor="#f5b942" />
-      <animate attributeName="x1" values="-100%; 100%" dur="3.5s" repeatCount="indefinite" />
-      <animate attributeName="x2" values="0%; 200%" dur="3.5s" repeatCount="indefinite" />
+      <animate attributeName="x1" values="-100%; 100%" dur="2.5s" repeatCount="indefinite" />
+      <animate attributeName="x2" values="0%; 200%" dur="2.5s" repeatCount="indefinite" />
     </linearGradient>
     
     <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feGaussianBlur stdDeviation="8" result="blur" />
       <feMerge>
         <feMergeNode in="blur" />
         <feMergeNode in="SourceGraphic" />
@@ -19,18 +20,31 @@
     </filter>
 
     <radialGradient id="wellPulse">
-      <stop offset="0%" stopColor="#4de8d4" stopOpacity="0.8">
-        <animate attributeName="stopOpacity" values="0.8; 0.2; 0.8" dur="2s" repeatCount="indefinite" />
+      <stop offset="0%" stopColor="#4de8d4" stopOpacity="0.9">
+        <animate attributeName="stopOpacity" values="0.9; 0.1; 0.9" dur="1.5s" repeatCount="indefinite" />
       </stop>
       <stop offset="100%" stopColor="#0b1220" stopOpacity="0" />
     </radialGradient>
+
+    <!-- Data bits animation -->
+    <g id="data-bit">
+      <circle cx="0" cy="0" r="3" fill="#ffffff" filter="url(#glow)">
+        <animate attributeName="opacity" values="0;1;0" dur="2.5s" repeatCount="indefinite"/>
+      </circle>
+    </g>
   </defs>
 
+  <!-- Animated Grid Background -->
+  <g stroke="#1c2740" stroke-width="1" opacity="0.3">
+    <path d="M0,40 H800 M0,80 H800 M0,120 H800 M0,160 H800 M0,200 H800 M0,240 H800" />
+    <path d="M40,0 V280 M80,0 V280 M120,0 V280 M160,0 V280 M200,0 V280 M240,0 V280 M280,0 V280 M320,0 V280 M360,0 V280 M400,0 V280 M440,0 V280 M480,0 V280 M520,0 V280 M560,0 V280 M600,0 V280 M640,0 V280 M680,0 V280 M720,0 V280 M760,0 V280" />
+  </g>
+
   <!-- Title & Subtitle -->
-  <text x="400" y="70" fill="#e7eef5" font-family="-apple-system, sans-serif" font-size="32" font-weight="800" text-anchor="middle" letter-spacing="6">
+  <text x="400" y="70" fill="#e7eef5" font-family="-apple-system, sans-serif" font-size="36" font-weight="800" text-anchor="middle" letter-spacing="8">
     MICROFLOW AI
   </text>
-  <text x="400" y="95" fill="#8ea0bd" font-family="-apple-system, sans-serif" font-size="14" font-weight="400" text-anchor="middle" letter-spacing="2">
+  <text x="400" y="95" fill="#8ea0bd" font-family="-apple-system, sans-serif" font-size="14" font-weight="400" text-anchor="middle" letter-spacing="3">
     ORGAN-ON-CHIP ASSAY SIMULATOR
   </text>
 
@@ -38,23 +52,47 @@
   <g transform="translate(100, 160)">
     <!-- Base structural track -->
     <path d="M0,0 C80,0 120,-40 180,-40 S230,40 300,40 S360,-40 420,-40 S480,40 550,40 S580,0 600,0"
-          fill="none" stroke="#16213a" stroke-width="24" stroke-linecap="round"/>
+          fill="none" stroke="#16213a" stroke-width="26" stroke-linecap="round"/>
     
     <!-- Flow track (glowing gradient) -->
     <path d="M0,0 C80,0 120,-40 180,-40 S230,40 300,40 S360,-40 420,-40 S480,40 550,40 S580,0 600,0"
-          fill="none" stroke="url(#flowGrad)" stroke-width="8" stroke-linecap="round" filter="url(#glow)"/>
+          fill="none" stroke="url(#flowGrad)" stroke-width="10" stroke-linecap="round" filter="url(#glow)"/>
           
     <!-- Droplet nodes simulating wells -->
-    <circle cx="180" cy="-40" r="16" fill="#121b2e" stroke="#24324d" stroke-width="4" />
-    <circle cx="180" cy="-40" r="8" fill="url(#wellPulse)" />
+    <g transform="translate(180, -40)">
+      <circle r="18" fill="#121b2e" stroke="#24324d" stroke-width="4" />
+      <circle r="10" fill="url(#wellPulse)" />
+      <circle r="18" fill="none" stroke="#4de8d4" stroke-width="1" opacity="0">
+        <animate attributeName="r" values="18;35" dur="1.5s" repeatCount="indefinite" />
+        <animate attributeName="opacity" values="0.8;0" dur="1.5s" repeatCount="indefinite" />
+      </circle>
+    </g>
     
-    <circle cx="300" cy="40" r="16" fill="#121b2e" stroke="#24324d" stroke-width="4" />
-    <circle cx="300" cy="40" r="8" fill="url(#wellPulse)" />
+    <g transform="translate(300, 40)">
+      <circle r="18" fill="#121b2e" stroke="#24324d" stroke-width="4" />
+      <circle r="10" fill="url(#wellPulse)" />
+      <circle r="18" fill="none" stroke="#4de8d4" stroke-width="1" opacity="0">
+        <animate attributeName="r" values="18;35" dur="1.5s" repeatCount="indefinite" begin="0.3s"/>
+        <animate attributeName="opacity" values="0.8;0" dur="1.5s" repeatCount="indefinite" begin="0.3s"/>
+      </circle>
+    </g>
     
-    <circle cx="420" cy="-40" r="16" fill="#121b2e" stroke="#24324d" stroke-width="4" />
-    <circle cx="420" cy="-40" r="8" fill="url(#wellPulse)" />
+    <g transform="translate(420, -40)">
+      <circle r="18" fill="#121b2e" stroke="#24324d" stroke-width="4" />
+      <circle r="10" fill="url(#wellPulse)" />
+      <circle r="18" fill="none" stroke="#4de8d4" stroke-width="1" opacity="0">
+        <animate attributeName="r" values="18;35" dur="1.5s" repeatCount="indefinite" begin="0.6s"/>
+        <animate attributeName="opacity" values="0.8;0" dur="1.5s" repeatCount="indefinite" begin="0.6s"/>
+      </circle>
+    </g>
     
-    <circle cx="550" cy="40" r="16" fill="#121b2e" stroke="#24324d" stroke-width="4" />
-    <circle cx="550" cy="40" r="8" fill="url(#wellPulse)" />
+    <g transform="translate(550, 40)">
+      <circle r="18" fill="#121b2e" stroke="#24324d" stroke-width="4" />
+      <circle r="10" fill="url(#wellPulse)" />
+      <circle r="18" fill="none" stroke="#4de8d4" stroke-width="1" opacity="0">
+        <animate attributeName="r" values="18;35" dur="1.5s" repeatCount="indefinite" begin="0.9s"/>
+        <animate attributeName="opacity" values="0.8;0" dur="1.5s" repeatCount="indefinite" begin="0.9s"/>
+      </circle>
+    </g>
   </g>
 </svg>
